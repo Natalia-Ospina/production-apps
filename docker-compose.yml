@@ -1,0 +1,11 @@
+services:
+  piramide-bird:
+    build: .
+    container_name: piramide-bird
+    ports:
+      - "8081:3838"
+    env_file:
+      - .env
+    volumes:
+      - ./.env:/srv/shiny-server/.env:ro
+    restart: unless-stopped

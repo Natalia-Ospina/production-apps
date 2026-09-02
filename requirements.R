@@ -1,0 +1,19 @@
+packages <- c(
+  "shiny",
+  "bs4Dash",
+  "plotly",
+  "DT",
+  "ggplot2",
+  "dplyr",
+  "tidyr",
+  "lubridate",
+  "scales",
+  "ggrepel",
+  "readr",
+  "stringr",
+  "purrr",
+  "DBI",
+  "dotenv",
+  "RPostgres",
+  "bcrypt"
+)
