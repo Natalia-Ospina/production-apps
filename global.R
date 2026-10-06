@@ -57,7 +57,7 @@ query2 <- paste0("SELECT \"Fecha\", \"Hora\", \"Ruta\", \"Codigo\", \"CodigoOper
 accidentes <- dbGetQuery(con, query2)
 
 # Construir la consulta SQL con solo las columnas necesarias
-query3 <- paste0("SELECT \"IdIco\", \"EstadoDp\", \"IdOperador\", \"TipoNovedad\", \"FechaNovedad\", \"Area\", \"NroSaeConductor\", \"Puntos\",\"Detalle\"
+query3 <- paste0("SELECT \"IdIco\", \"EstadoDp\", \"IdEmpresa\", \"TipoNovedad\", \"FechaNovedad\", \"Area\", \"NroSaeConductor\", \"Puntos\",\"Detalle\"
                  FROM \"op\".\"FactDetalleIco\";")
 
 # Ejecutar la consulta en la base de datos
