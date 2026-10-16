@@ -1273,31 +1273,45 @@ server <- function(input, output, session){
   # TABLA
   #############################################################
   
-  output$tabla_riesgo <- renderDT({
+  output$tabla_riesgo <- DT::renderDT({
     
-    datatable(
-      
+    DT::datatable(
       ranking_operadores(),
-      
       filter = "top",
-      
       extensions = "Buttons",
-      
       options = list(
-        
         pageLength = 20,
-        
+        lengthMenu = c(10, 20, 50, 100, -1),
         scrollX = TRUE,
-        
         dom = "Bfrtip",
-        
-        buttons = c("copy","csv","excel")
-        
-      )
-      
+        buttons = list(
+          list(
+            extend = "copy",
+            text = "Copiar",
+            exportOptions = list(
+              modifier = list(page = "all")
+            )
+          ),
+          list(
+            extend = "csv",
+            text = "Descargar CSV",
+            exportOptions = list(
+              modifier = list(page = "all")
+            )
+          ),
+          list(
+            extend = "excel",
+            text = "Descargar Excel",
+            exportOptions = list(
+              modifier = list(page = "all")
+            )
+          )
+        )
+      ),
+      rownames = FALSE
     )
     
-  })
+  }, server = FALSE)
   
   #==================================================
   # EVENTOS DE TELEMETRÍA
