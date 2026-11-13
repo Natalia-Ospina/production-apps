@@ -162,6 +162,7 @@ calcular_score_telemetria <- function(
     pesos
 ){
   
+  # Conteo bruto por operador y tipo de evento
   datos <- telemetria_op %>%
     
     count(
@@ -186,13 +187,41 @@ calcular_score_telemetria <- function(
     
   }
   
+  # EV19 ajustado: se cuenta por operador y día y a cada día se le
+  # aplica la raíz cuadrada. Misma regla para todos: más eventos
+  # siempre suman más, pero un día anómalo (p. ej. falla de cámara)
+  # no domina el score.
+  ev19_ajustado <- telemetria_op %>%
+    
+    filter(Tabla == "EV19") %>%
+    
+    count(
+      CodigoOperador,
+      Fecha,
+      name = "EventosDia"
+    ) %>%
+    
+    group_by(CodigoOperador) %>%
+    
+    summarise(
+      EV19_ajustado = round(sum(sqrt(EventosDia)), 2),
+      .groups = "drop"
+    )
+  
   datos %>%
+    
+    left_join(
+      ev19_ajustado,
+      by = "CodigoOperador"
+    ) %>%
     
     mutate(
       
+      EV19_ajustado = coalesce(EV19_ajustado, 0),
+      
       ScoreTelemetria =
         
-        EV19*pesos$EV19 +
+        EV19_ajustado*pesos$EV19 +
         
         ALA1*pesos$ALA1 +
         
@@ -465,6 +494,17 @@ calcular_riesgo <- function(
       
     )
   
+  # Redondeo a 2 decimales (después de calcular percentiles y
+  # niveles para no alterar la clasificación)
+  riesgo <-
+    riesgo %>%
+    mutate(
+      across(
+        c(EV19_ajustado, ScoreTelemetria, ScoreTotal),
+        ~round(.x, 2)
+      )
+    )
+  
   riesgo
   
 }
@@ -567,14 +607,17 @@ crear_tarjetas_piramide <- function(datos){
           
           "\nNivel: ", op$Nivel,
           
-          "\nScore Total: ", round(op$ScoreTotal, 2),
+          "\nScore Total: ", formatC(op$ScoreTotal, format = "f", digits = 2),
           
           "\n\n📡 TELEMETRÍA (",
-          round(op$ScoreTelemetria, 2),
+          formatC(op$ScoreTelemetria, format = "f", digits = 2),
           " pts)",
           
           if(op$EV19 > 0)
-            paste0("\n• EV19 (Sin mirar al frente): ", op$EV19)
+            paste0(
+              "\n• EV19 (Sin mirar al frente): ", op$EV19,
+              " (", formatC(op$EV19_ajustado, format = "f", digits = 2), ")"
+            )
           else "",
           
           if(op$ALA1 > 0)

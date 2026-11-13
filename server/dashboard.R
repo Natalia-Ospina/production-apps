@@ -1789,6 +1789,10 @@ server <- function(input, output, session){
     
     crear_tarjetas <- function(datos_nivel, nivel){
       
+      # Pesos actuales del modelo, para mostrar los puntos
+      # que aporta cada variable en el tooltip
+      pesos_tt <- pesos_modelo()
+      
       if(nrow(datos_nivel) == 0){
         return(NULL)
       }
@@ -1876,91 +1880,102 @@ server <- function(input, output, session){
             
             "Operador: ", op$CodigoOperador,
             "\nNivel: ", op$Nivel,
-            "\nScore Total: ", round(op$ScoreTotal, 2),
+            "\nScore Total: ", formatC(op$ScoreTotal, format = "f", digits = 2),
             
             "\n\n📡 TELEMETRÍA (",
-            round(op$ScoreTelemetria, 2),
+            formatC(op$ScoreTelemetria, format = "f", digits = 2),
             " pts)",
             
             if(op$EV19 > 0)
               paste0(
                 "\n• EV19 (Sin mirar al frente): ",
-                op$EV19
+                op$EV19,
+                " (", formatC(op$EV19_ajustado * pesos_tt$telemetria_op$EV19, format = "f", digits = 2), " pts)"
               )
             else "",
             
             if(op$ALA1 > 0)
               paste0(
                 "\n• ALA1 (Aceleración brusca): ",
-                op$ALA1
+                op$ALA1,
+                " (", formatC(op$ALA1 * pesos_tt$telemetria_op$ALA1, format = "f", digits = 2), " pts)"
               )
             else "",
             
             if(op$ALA2 > 0)
               paste0(
                 "\n• ALA2 (Frenada brusca): ",
-                op$ALA2
+                op$ALA2,
+                " (", formatC(op$ALA2 * pesos_tt$telemetria_op$ALA2, format = "f", digits = 2), " pts)"
               )
             else "",
             
             if(op$ALA3 > 0)
               paste0(
                 "\n• ALA3 (Exceso velocidad): ",
-                op$ALA3
+                op$ALA3,
+                " (", formatC(op$ALA3 * pesos_tt$telemetria_op$ALA3, format = "f", digits = 2), " pts)"
               )
             else "",
             
             
             "\n\n⚠ ACCIDENTES (",
-            round(op$ScoreAccidentes, 2),
+            formatC(op$ScoreAccidentes, format = "f", digits = 2),
             " pts)",
             
             if(op$Simples > 0)
               paste0(
                 "\n• Simples: ",
-                op$Simples
+                op$Simples,
+                " (", formatC(op$Simples * pesos_tt$accidentes$Simple, format = "f", digits = 2), " pts)"
               )
             else "",
             
             if(op$Lesionados > 0)
               paste0(
                 "\n• Lesionados: ",
-                op$Lesionados
+                op$Lesionados,
+                " (", formatC(op$Lesionados * pesos_tt$accidentes$Lesionados, format = "f", digits = 2), " pts)"
               )
             else "",
             
             if(op$Fatales > 0)
               paste0(
                 "\n• Fatalidades: ",
-                op$Fatales
+                op$Fatales,
+                " (", formatC(op$Fatales * pesos_tt$accidentes$Fatalidad, format = "f", digits = 2), " pts)"
               )
             else "",
             
             "\n\nResponsabilidad Green Móvil: ",
             op$Responsables,
+            " (", formatC(op$ScoreResponsabilidad, format = "f", digits = 2), " pts)",
             
             "\n\n🚨 INFRACCIONES (",
-            round(op$ScoreInfracciones, 2),
+            formatC(op$ScoreInfracciones, format = "f", digits = 2),
             " pts)",
             
             if(op$Tipo_I > 0)
               paste0(
                 "\n• Tipo I: ",
-                op$Tipo_I
+                op$Tipo_I,
+                " (", formatC(op$Tipo_I * pesos_tt$infracciones$Tipo_I, format = "f", digits = 2), " pts)"
               )
             else "",
             
             if(op$Tipo_II > 0)
               paste0(
                 "\n• Tipo II: ",
-                op$Tipo_II
+                op$Tipo_II,
+                " (", formatC(op$Tipo_II * pesos_tt$infracciones$Tipo_II, format = "f", digits = 2), " pts)"
               )
             else "",
             
             if(op$Tipo_III > 0)
               paste0(
                 "\n• Tipo III: ",
-                op$Tipo_III
+                op$Tipo_III,
+                " (", formatC(op$Tipo_III * pesos_tt$infracciones$Tipo_III, format = "f", digits = 2), " pts)"
               )
             else ""
             
@@ -2156,6 +2171,10 @@ server <- function(input, output, session){
     
     crear_tarjetas <- function(datos_nivel, nivel){
       
+      # Pesos actuales del modelo, para mostrar los puntos
+      # que aporta cada variable en el tooltip
+      pesos_tt <- pesos_modelo()
+      
       if(nrow(datos_nivel) == 0){
         return(NULL)
       }
@@ -2197,69 +2216,77 @@ server <- function(input, output, session){
             
             "Operador: ", op$CodigoOperador,
             "\nNivel: ", op$Nivel,
-            "\nScore Total: ", round(op$ScoreTotal, 2),
+            "\nScore Total: ", formatC(op$ScoreTotal, format = "f", digits = 2),
             
             "\n\n📡 TELEMETRÍA (",
-            round(op$ScoreTelemetria, 2),
+            formatC(op$ScoreTelemetria, format = "f", digits = 2),
             " pts)",
             
             if(op$EV19 > 0)
               paste0(
                 "\n• EV19 (Sin mirar al frente): ",
-                op$EV19
+                op$EV19,
+                " (", formatC(op$EV19_ajustado * pesos_tt$telemetria_op$EV19, format = "f", digits = 2), " pts)"
               )
             else "",
             
             if(op$ALA1 > 0)
               paste0(
                 "\n• ALA1 (Aceleración brusca): ",
-                op$ALA1
+                op$ALA1,
+                " (", formatC(op$ALA1 * pesos_tt$telemetria_op$ALA1, format = "f", digits = 2), " pts)"
               )
             else "",
             
             if(op$ALA2 > 0)
               paste0(
                 "\n• ALA2 (Frenada brusca): ",
-                op$ALA2
+                op$ALA2,
+                " (", formatC(op$ALA2 * pesos_tt$telemetria_op$ALA2, format = "f", digits = 2), " pts)"
               )
             else "",
             
             if(op$ALA3 > 0)
               paste0(
                 "\n• ALA3 (Exceso velocidad): ",
-                op$ALA3
+                op$ALA3,
+                " (", formatC(op$ALA3 * pesos_tt$telemetria_op$ALA3, format = "f", digits = 2), " pts)"
               )
             else "",
             
             
             "\n\n⚠ ACCIDENTES (",
-            round(op$ScoreAccidentes, 2),
+            formatC(op$ScoreAccidentes, format = "f", digits = 2),
             " pts)",
             
             if(op$Simples > 0)
               paste0(
                 "\n• Simples: ",
-                op$Simples
+                op$Simples,
+                " (", formatC(op$Simples * pesos_tt$accidentes$Simple, format = "f", digits = 2), " pts)"
               )
             else "",
             
             if(op$Lesionados > 0)
               paste0(
                 "\n• Lesionados: ",
-                op$Lesionados
+                op$Lesionados,
+                " (", formatC(op$Lesionados * pesos_tt$accidentes$Lesionados, format = "f", digits = 2), " pts)"
               )
             else "",
             
             if(op$Fatales > 0)
               paste0(
                 "\n• Fatalidades: ",
-                op$Fatales
+                op$Fatales,
+                " (", formatC(op$Fatales * pesos_tt$accidentes$Fatalidad, format = "f", digits = 2), " pts)"
               )
             else "",
             
             
             "\n\nResponsabilidad Green Móvil: ",
-            op$Responsables
+            op$Responsables,
+            " (", formatC(op$ScoreResponsabilidad, format = "f", digits = 2), " pts)"
             
           )
           

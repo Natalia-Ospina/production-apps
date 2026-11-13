@@ -638,7 +638,7 @@ ui <- bs4DashPage(
                   "EV19",
                   min = 0,
                   max = 20,
-                  value = 1,
+                  value = 2,
                   step = 1,
                   width = "95%"
                 ),

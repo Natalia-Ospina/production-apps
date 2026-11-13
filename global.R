@@ -207,7 +207,7 @@ MODELO_DEFAULT <- list(
   
   telemetria_op = list(
     
-    EV19 = 1,
+    EV19 = 2,
     
     ALA1 = 3,
     
