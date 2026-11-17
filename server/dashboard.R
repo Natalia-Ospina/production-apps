@@ -1672,7 +1672,11 @@ server <- function(input, output, session){
   
   output$graf_operadores <- renderPlotly({
     
-    datos <- ranking_operadores()
+    datos <- ranking_operadores() %>%
+      
+      # La gráfica muestra máximo 20 operadores, aunque el
+      # filtro esté en "Todos" (la tabla sí muestra todos)
+      dplyr::slice_head(n = 20)
     
     req(nrow(datos) > 0)
     
