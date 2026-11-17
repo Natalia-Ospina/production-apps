@@ -511,6 +511,214 @@ calcular_riesgo <- function(
 
 
 #==========================================================
+# GUARDAR DISTRIBUCIÓN DE RIESGO EN LA BASE DE DATOS
+#==========================================================
+# Guarda un "corte" con todos los operadores del dataframe de
+# riesgo. Cada llamada crea un corte nuevo (no borra los
+# anteriores), identificado por IdCorte.
+#
+# AltoSemanaAnterior: TRUE/FALSE si el operador estaba en
+# nivel Alto en el corte de la semana anterior (el corte cuyo
+# FechaFin es el día antes de FechaInicio; si hay varios se
+# usa el automático). Queda vacío (NA) si no existe ese corte.
+#==========================================================
+
+guardar_riesgo <- function(
+    riesgo,
+    fecha_inicio,
+    fecha_fin,
+    pesos,
+    percentil_medio,
+    percentil_alto,
+    usuario = NA_character_,
+    esquema = Sys.getenv("INTEL_DB_SCHEMA", "public"),
+    tabla = "FactRiesgoOperadores"
+){
+  
+  insert_date <- Sys.time()
+  
+  id_corte <- format(
+    insert_date,
+    "%Y%m%d%H%M%S",
+    tz = "America/Bogota"
+  )
+  
+  fecha_inicio <- as.Date(fecha_inicio)
+  fecha_fin    <- as.Date(fecha_fin)
+  
+  # Parámetros con los que se calculó el riesgo
+  parametros <- paste0(
+    "EV19=", pesos$telemetria_op$EV19,
+    ";ALA1=", pesos$telemetria_op$ALA1,
+    ";ALA2=", pesos$telemetria_op$ALA2,
+    ";ALA3=", pesos$telemetria_op$ALA3,
+    ";Simple=", pesos$accidentes$Simple,
+    ";Lesionados=", pesos$accidentes$Lesionados,
+    ";Fatalidad=", pesos$accidentes$Fatalidad,
+    ";Responsabilidad=", pesos$accidentes$Responsabilidad,
+    ";Tipo_I=", pesos$infracciones$Tipo_I,
+    ";Tipo_II=", pesos$infracciones$Tipo_II,
+    ";Tipo_III=", pesos$infracciones$Tipo_III,
+    ";PercentilMedio=", percentil_medio,
+    ";PercentilAlto=", percentil_alto
+  )
+  
+  cols_conteo <- c(
+    "EV19", "ALA1", "ALA2", "ALA3",
+    "Simples", "Lesionados", "Fatales",
+    "Responsables", "NoResponsables",
+    "Tipo_I", "Tipo_II", "Tipo_III"
+  )
+  
+  cols_score <- c(
+    "EV19_ajustado",
+    "ScoreTelemetria", "ScoreAccidentes",
+    "ScoreResponsabilidad", "ScoreInfracciones",
+    "ScoreTotal"
+  )
+  
+  # Si alguna columna no existe (p. ej. sin infracciones en el
+  # periodo) se crea en 0 para que la tabla siempre reciba todas
+  for(col in c(cols_conteo, cols_score)){
+    if(!col %in% names(riesgo))
+      riesgo[[col]] <- 0
+  }
+  
+  # Conexión propia para escribir, que se cierra al terminar
+  con_w <- conexion_intelligence()
+  on.exit(DBI::dbDisconnect(con_w), add = TRUE)
+  
+  tabla_sql <- DBI::dbQuoteIdentifier(
+    con_w,
+    DBI::Id(schema = esquema, table = tabla)
+  )
+  
+  #--------------------------------------------------------
+  # OPERADORES EN RIESGO ALTO LA SEMANA ANTERIOR
+  #--------------------------------------------------------
+  
+  corte_anterior <- DBI::dbGetQuery(
+    con_w,
+    paste0(
+      'SELECT "IdCorte" FROM ', tabla_sql,
+      ' WHERE "FechaFin" = $1',
+      ' GROUP BY "IdCorte", "Usuario"',
+      # Se prefiere el corte automático; si no hay, el más reciente
+      ' ORDER BY ("Usuario" = \'AUTOMATICO\') DESC NULLS LAST, "IdCorte" DESC',
+      ' LIMIT 1'
+    ),
+    params = list(fecha_inicio - 1)
+  )$IdCorte
+  
+  hay_corte_anterior <- length(corte_anterior) == 1 &&
+    !is.na(corte_anterior)
+  
+  if(hay_corte_anterior){
+    
+    altos_anterior <- DBI::dbGetQuery(
+      con_w,
+      paste0(
+        'SELECT "CodigoOperador" FROM ', tabla_sql,
+        ' WHERE "IdCorte" = $1 AND "Nivel" = \'Alto\''
+      ),
+      params = list(corte_anterior)
+    )$CodigoOperador
+    
+  }
+  
+  #--------------------------------------------------------
+  # ARMAR EL CORTE
+  #--------------------------------------------------------
+  
+  datos <- riesgo %>%
+    
+    arrange(desc(ScoreTotal)) %>%
+    
+    mutate(
+      IdCorte = id_corte,
+      InsertDate = insert_date,
+      FechaInicio = fecha_inicio,
+      FechaFin = fecha_fin,
+      Usuario = if(is.null(usuario)) NA_character_ else as.character(usuario),
+      Parametros = parametros,
+      CodigoOperador = as.character(CodigoOperador),
+      Ranking = row_number(),
+      AltoSemanaAnterior = if(hay_corte_anterior)
+        CodigoOperador %in% altos_anterior
+      else
+        NA,
+      across(all_of(cols_conteo), as.integer),
+      across(all_of(cols_score), ~round(as.numeric(.x), 2))
+    ) %>%
+    
+    select(
+      IdCorte, InsertDate, FechaInicio, FechaFin,
+      Usuario, Parametros,
+      CodigoOperador, Ranking, Nivel, AltoSemanaAnterior,
+      all_of(cols_conteo),
+      all_of(cols_score)
+    )
+  
+  DBI::dbWithTransaction(con_w, {
+    DBI::dbAppendTable(
+      con_w,
+      DBI::Id(schema = esquema, table = tabla),
+      datos
+    )
+  })
+  
+  list(
+    id_corte = id_corte,
+    filas = nrow(datos),
+    corte_anterior = if(hay_corte_anterior) corte_anterior else NA
+  )
+  
+}
+
+
+#==========================================================
+# ¿YA EXISTE UN CORTE PARA ESE PERIODO Y USUARIO?
+#==========================================================
+# Se usa en el proceso semanal para no guardar dos veces la
+# misma semana si el script se ejecuta de nuevo.
+#==========================================================
+
+existe_corte <- function(
+    fecha_inicio,
+    fecha_fin,
+    usuario,
+    esquema = Sys.getenv("INTEL_DB_SCHEMA", "public"),
+    tabla = "FactRiesgoOperadores"
+){
+  
+  con_r <- conexion_intelligence()
+  on.exit(DBI::dbDisconnect(con_r), add = TRUE)
+  
+  tabla_sql <- DBI::dbQuoteIdentifier(
+    con_r,
+    DBI::Id(schema = esquema, table = tabla)
+  )
+  
+  n <- DBI::dbGetQuery(
+    con_r,
+    paste0(
+      'SELECT COUNT(*) AS n FROM ', tabla_sql,
+      ' WHERE "FechaInicio" = $1 AND "FechaFin" = $2',
+      ' AND "Usuario" = $3'
+    ),
+    params = list(
+      as.Date(fecha_inicio),
+      as.Date(fecha_fin),
+      usuario
+    )
+  )$n
+  
+  as.numeric(n) > 0
+  
+}
+
+
+#==========================================================
 # CONSTRUIR PIRÁMIDE DE OPERADORES
 #==========================================================
 

@@ -40,6 +40,23 @@ conexion_dwh <- function() {
   )
 }
 
+#==========================================================
+# CONEXIÓN BD DE INTELIGENCIA OPERACIONAL
+# (grm_ope_intelligence_db). Aquí se guardan los cortes
+# semanales de riesgo. Datos de acceso en el .env
+#==========================================================
+conexion_intelligence <- function() {
+  
+  DBI::dbConnect(
+    RPostgres::Postgres(),
+    host = Sys.getenv("DB2_HOST"),
+    port = as.integer(Sys.getenv("DB_PORT")),
+    dbname = Sys.getenv("DB2_NAME"),
+    user = Sys.getenv("DB2_USER"),
+    password = Sys.getenv("DB2_PASSWORD")
+  )
+}
+
 con <- conexion_dwh()
 
 # Construir la consulta SQL con solo las columnas necesarias
